@@ -36,6 +36,7 @@ if st.button("Jalankan Produksi"):
     else:
         try:
             client = genai.Client(api_key=api_key)
+            MODEL_AI = 'gemini-3.8-flash'
             
             # --- AGEN 1: KONSEP & KELUCUAN ---
             with st.status("🕵️ Agen 1: Merancang kelucuan & alur...", expanded=True) as status:
@@ -45,7 +46,7 @@ if st.button("Jalankan Produksi"):
                 Kembangkan ide ini menjadi konsep cerita pendek 30-45 detik. Tentukan karakter, situasi konyol, dan kejutan/klimaks yang lucu atau menyindir. Buat dalam 3-4 poin singkat.
                 """
                 res_riset = client.models.generate_content(
-                    model='gemini-2.5-flash',
+                    model=MODEL_AI,
                     contents=prompt_riset
                 )
                 hasil_riset = res_riset.text
@@ -68,7 +69,7 @@ if st.button("Jalankan Produksi"):
                 [CAPTION]: (Tulis caption singkat memancing komentar + 5 hashtag).
                 """
                 res_naskah = client.models.generate_content(
-                    model='gemini-2.5-flash',
+                    model=MODEL_AI,
                     contents=prompt_naskah
                 )
                 hasil_naskah = res_naskah.text
@@ -83,10 +84,10 @@ if st.button("Jalankan Produksi"):
                 
                 Untuk setiap adegan (Adegan 1 sampai 5), berikan:
                 1. Aksi/cerita singkat bahasa Indonesia.
-                2. Prompt bahasa Inggris yang sangat detail dan konsisten karakternya. Jika gaya Animasi Absurd, gunakan gaya '3D stylized animation, Pixar meets Larva comedy style, exaggerated funny facial expressions, bright vibrant lighting, dynamic camera'. Jika Sarkas, gunakan 'satirical editorial 3D illustration, moody cinematic lighting'.
+                2. Prompt bahasa Inggris yang sangat detail dan konsisten karakternya. Jika gaya Animasi Absurd, gunakan gaya '3D stylized animation, Pixar meets Larva comedy style, exaggerated funny facial expressions, bright vibrant lighting, dynamic camera'. Jika gaya Sarkas, gunakan 'satirical editorial 3D illustration, moody cinematic lighting'.
                 """
                 res_visual = client.models.generate_content(
-                    model='gemini-2.5-flash',
+                    model=MODEL_AI,
                     contents=prompt_visual
                 )
                 hasil_visual = res_visual.text
