@@ -38,6 +38,10 @@ if st.button("Jalankan Produksi"):
             client = genai.Client(api_key=api_key)
             MODEL_AI = 'gemini-3.8-flash'
             
+            # Menentukan gender suara berdasarkan pilihan di sidebar
+            gender_suara = "Cowok" if "ArdiNeural" in suara_pilihan else "Cewek"
+            mode_tanpa_dialog = "Tanpa Dialog" in gaya_konten
+            
             # --- AGEN 1: KONSEP & KELUCUAN ---
             with st.status("🕵️ Agen 1: Merancang kelucuan & alur...", expanded=True) as status:
                 prompt_riset = f"""
@@ -62,7 +66,7 @@ if st.button("Jalankan Produksi"):
                 Buat skenario video pendek (30-45 detik) dengan gaya {gaya_konten}.
                 Aturan wajib:
                 - Jika gaya 'Tanpa Dialog': Tulis aksi fisik karakter dan ekspresi wajah yang lucu per detik. Di bagian [NASKAH VO], tulis HANYA kata: TANPA SUARA.
-                - Jika memakai narator/sarkas: Gunakan bahasa Indonesia sehari-hari yang tajam, santai, tidak kaku.
+                - Jika memakai narator/sarkas: Gunakan bahasa Indonesia sehari-hari yang tajam, santai, tidak kaku, dan bagi menjadi 5 kalimat/bagian pendek sesuai alur cerita.
                 
                 Format output wajib persis seperti ini:
                 [NASKAH VO]: (Tulis HANYA teks yang dibacakan narator tanpa tanda kurung, atau tulis TANPA SUARA jika tanpa dialog).
@@ -76,23 +80,43 @@ if st.button("Jalankan Produksi"):
                 st.write(hasil_naskah)
                 status.update(label="✅ Skenario & Caption Siap!", state="complete", expanded=False)
 
-            # --- AGEN 3: SUTRADARA ANIMASI (PROMPT VISUAL) ---
-            with st.status("🎬 Agen 3: Membuat prompt animasi per adegan...", expanded=True) as status:
+            # --- AGEN 3: SUTRADARA ANIMASI (GABUNGAN PROMPT VISUAL + NARASI SEKALI COPAS) ---
+            with st.status("🎬 Agen 3: Menyatukan prompt visual & narasi per adegan...", expanded=True) as status:
+                if mode_tanpa_dialog:
+                    instruksi_narasi = "Karena ini mode Tanpa Dialog, JANGAN sertakan teks narasi/dialog apa pun. Tulis HANYA prompt visual bahasa Inggris."
+                else:
+                    instruksi_narasi = f"""
+                    Pecah naskah VO dari skenario di atas menjadi 5 bagian yang pas untuk masing-masing adegan.
+                    Di bawah setiap prompt visual bahasa Inggris, tambahkan baris baru dengan format persis:
+                    Narasi ({gender_suara}): "[potongan kalimat narasi bahasa Indonesia untuk adegan ini]"
+                    """
+
                 prompt_visual = f"""
-                Ubah skenario berikut menjadi 5 adegan visual berurutan (rasio 9:16) untuk generator gambar/video AI (Google Flow / Leonardo AI / Kling):
+                Ubah skenario berikut menjadi tepat 5 adegan visual berurutan (rasio 9:16) untuk generator video AI (seperti Google Flow / Veo / Kling):
                 {hasil_naskah}
                 
-                Untuk setiap adegan (Adegan 1 sampai 5), berikan:
-                1. Aksi/cerita singkat bahasa Indonesia.
-                2. Prompt bahasa Inggris yang sangat detail dan konsisten karakternya. Jika gaya Animasi Absurd, gunakan gaya '3D stylized animation, Pixar meets Larva comedy style, exaggerated funny facial expressions, bright vibrant lighting, dynamic camera'. Jika gaya Sarkas, gunakan 'satirical editorial 3D illustration, moody cinematic lighting'.
+                Aturan format output SANGAT PENTING:
+                - Pisahkan setiap adegan dengan simbol '==='.
+                - Jangan beri nomor adegan (seperti Adegan 1) dan jangan beri penjelasan tambahan di luar format.
+                - Jika gaya Animasi Absurd, wajib sertakan gaya: '3D stylized animation, Pixar meets Larva comedy style, exaggerated funny facial expressions, bright vibrant lighting, dynamic camera, 9:16 vertical aspect ratio'.
+                - Jika gaya Sarkas, wajib sertakan gaya: 'satirical editorial 3D illustration, moody cinematic lighting, dramatic camera angle, 9:16 vertical aspect ratio'.
+                
+                {instruksi_narasi}
                 """
                 res_visual = client.models.generate_content(
                     model=MODEL_AI,
                     contents=prompt_visual
                 )
                 hasil_visual = res_visual.text
-                st.write(hasil_visual)
-                status.update(label="✅ 5 Prompt Visual Siap!", state="complete", expanded=False)
+                status.update(label="✅ 5 Paket Adegan Siap Disalin!", state="complete", expanded=False)
+
+            # Menampilkan kotak gabungan (Prompt Visual + Narasi) dengan tombol copy otomatis
+            st.subheader("📋 Paket Prompt & Narasi per Adegan (Klik ikon Copy di pojok kanan kotak)")
+            daftar_prompt = [p.strip() for p in hasil_visual.split('===') if p.strip()]
+            
+            for i, p_teks in enumerate(daftar_prompt, 1):
+                st.markdown(f"**Adegan {i}:**")
+                st.code(p_teks, language=None)
 
             # --- AGEN 4: PENGISI SUARA OTOMATIS (TTS) ---
             match = re.search(r'\[NASKAH VO\]:(.*?)\[CAPTION\]:', hasil_naskah, re.DOTALL)
@@ -106,10 +130,10 @@ if st.button("Jalankan Produksi"):
                     
                     st.audio(file_audio, format="audio/mp3")
                     with open(file_audio, "rb") as f:
-                        st.download_button("⬇️ Download File Suara (.mp3)", f, file_name="vo_konten.mp3")
+                        st.download_button("⬇️ Download File Suara Full (.mp3)", f, file_name="vo_konten.mp3")
                     status.update(label="✅ Audio Siap Diunduh!", state="complete", expanded=False)
             else:
-                st.info("🔇 Mode Tanpa Dialog aktif: Audio narator dilewati, silakan langsung gunakan 5 prompt visual di atas.")
+                st.info("🔇 Mode Tanpa Dialog aktif: Audio narator dilewati, silakan langsung copy 5 prompt di atas.")
 
         except Exception as e:
             st.error(f"❌ Terjadi kesalahan dari Google API: {e}")
